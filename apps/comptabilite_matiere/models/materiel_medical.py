@@ -39,6 +39,7 @@ class MaterielMedical(Materiel):
     
     unite_mesure = models.CharField(
         max_length=50,
+        choices=UniteMesureChoices.choices,
         verbose_name="Unité de mesure",
         help_text="Unité dans laquelle le matériel est compté (ex: BOITE, FLACON, SACHET...)"
     )

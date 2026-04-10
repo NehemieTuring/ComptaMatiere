@@ -155,6 +155,11 @@ class ModifierStatutSerializer(serializers.Serializer):
         if instance and instance.statut == value:
             raise serializers.ValidationError(f"Le besoin a déjà le statut '{instance.get_statut_display()}'.")
         
+        # Double Validation : Un besoin ne peut être clôturé (TRAITE/REJETE) que si un commentaire est présent
+        if value in [Besoin.StatutChoices.TRAITE, Besoin.StatutChoices.REJETE]:
+            if not instance.commentaire_directeur:
+                raise serializers.ValidationError("Un commentaire du directeur est obligatoire pour valider ou rejeter un besoin.")
+        
         return value
     
     def update(self, instance, validated_data):

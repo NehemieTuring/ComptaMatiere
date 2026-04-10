@@ -16,8 +16,8 @@ class ArchiveInventaire(models.Model):
     """
     
     class StatutChoices(models.TextChoices):
-        EN_COURS = 'EN_COURS', 'En cours'
-        TERMINE = 'TERMINE', 'Terminé'
+        OUVERT = 'OUVERT', 'Ouvert'
+        CLOTURE = 'CLOTURE', 'Clôturé'
         ANNULE = 'ANNULE', 'Annulé'
     
     id_archive = models.AutoField(
@@ -53,7 +53,7 @@ class ArchiveInventaire(models.Model):
     statut = models.CharField(
         max_length=10,
         choices=StatutChoices.choices,
-        default=StatutChoices.EN_COURS,
+        default=StatutChoices.OUVERT,
         verbose_name="Statut",
         help_text="État actuel de l'inventaire"
     )
@@ -90,10 +90,22 @@ class ArchiveInventaire(models.Model):
         return f"Archive {self.code_archive} - {self.get_statut_display()}"
     
     def terminer(self):
-        """Marque l'inventaire comme terminé."""
-        self.statut = self.StatutChoices.TERMINE
-        self.date_termine = timezone.now()
-        self.save(update_fields=['statut', 'date_termine'])
+        """
+        Marque l'inventaire comme terminé et met à jour le stock théorique
+        avec la valeur physique de chaque matériel.
+        """
+        if self.statut == self.StatutChoices.OUVERT:
+            # Commencer une transaction pour assurer la cohérence si possible
+            # Ici on boucle sur les lignes pour mettre à jour le stock des matériels
+            for ligne in self.lignes.all():
+                if ligne.quantite_nouveau_stock is not None:
+                    materiel = ligne.id_materiel
+                    materiel.quantite_stock = ligne.quantite_nouveau_stock
+                    materiel.save()
+            
+            self.statut = self.StatutChoices.CLOTURE
+            self.date_termine = timezone.now()
+            self.save(update_fields=['statut', 'date_termine'])
     
     def annuler(self):
         """Annule l'inventaire."""

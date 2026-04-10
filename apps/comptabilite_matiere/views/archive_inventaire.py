@@ -46,9 +46,9 @@ class ArchiveInventaireViewSet(viewsets.ModelViewSet):
     def terminer(self, request, pk=None):
         """Termine l'inventaire."""
         archive = self.get_object()
-        if archive.statut != ArchiveInventaire.StatutChoices.EN_COURS:
+        if archive.statut != ArchiveInventaire.StatutChoices.OUVERT:
             return Response(
-                {'error': 'L\'inventaire n\'est pas en cours.'},
+                {'error': 'L\'inventaire n\'est pas ouvert.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         archive.terminer()
@@ -102,8 +102,8 @@ class ArchiveInventaireViewSet(viewsets.ModelViewSet):
         ]
         return Response(data)
     
-    @action(detail=True, methods=['get'])
-    def recent(self, request, pk=None):
+    @action(detail=False, methods=['get'])
+    def recent(self, request):
         """Retourne les archives récentes."""
         archives = ArchiveInventaire.objects.order_by('-date_creation')[:10]
         return Response(ArchiveInventaireSerializer(archives, many=True).data)

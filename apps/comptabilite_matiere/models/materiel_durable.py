@@ -17,13 +17,14 @@ class MaterielDurable(Materiel):
     """
     
     class EtatChoices(models.TextChoices):
-        EN_BON_ETAT = 'EN_BON_ETAT', 'En Bon État'
+        BON_ETAT = 'BON_ETAT', 'Bon État'
         EN_REPARATION = 'EN_REPARATION', 'En Réparation'
+        REFORME = 'REFORME', 'Réformé'
     
     Etat = models.CharField(
         max_length=20,
         choices=EtatChoices.choices,
-        default=EtatChoices.EN_BON_ETAT,
+        default=EtatChoices.BON_ETAT,
         verbose_name="État",
         help_text="État actuel du matériel"
     )
@@ -51,7 +52,7 @@ class MaterielDurable(Materiel):
     
     def est_en_bon_etat(self):
         """Vérifie si le matériel est en bon état."""
-        return self.Etat == self.EtatChoices.EN_BON_ETAT
+        return self.Etat == self.EtatChoices.BON_ETAT
     
     def mettre_en_reparation(self):
         """Met le matériel en réparation."""
@@ -60,5 +61,5 @@ class MaterielDurable(Materiel):
     
     def remettre_en_service(self):
         """Remet le matériel en service (bon état)."""
-        self.Etat = self.EtatChoices.EN_BON_ETAT
+        self.Etat = self.EtatChoices.BON_ETAT
         self.save(update_fields=['Etat'])

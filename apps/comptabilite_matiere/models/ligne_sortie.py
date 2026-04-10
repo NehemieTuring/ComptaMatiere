@@ -95,7 +95,37 @@ class LigneSortie(models.Model):
         return f"{self.nom_materiel} x{self.quantite}"
     
     def save(self, *args, **kwargs):
-        """Calcule automatiquement le sous-total si prix_unitaire est défini."""
+        """
+        Calcule automatiquement le sous-total et met à jour le stock.
+        Vérifie que le stock est suffisant avant de décrémenter.
+        """
         if self.prix_unitaire is not None:
             self.sous_total = self.quantite * self.prix_unitaire
+            
+        materiel = self.id_materiel
+        
+        if not self.pk:
+            # Nouvelle sortie
+            if materiel.quantite_stock < self.quantite:
+                raise ValueError(f"Stock insuffisant pour {materiel.nom_Materiel}. Disponible: {materiel.quantite_stock}")
+            
+            materiel.quantite_stock -= self.quantite
+            materiel.save()
+        else:
+            # Mise à jour
+            old_instance = LigneSortie.objects.get(pk=self.pk)
+            diff = self.quantite - old_instance.quantite
+            if diff != 0:
+                if materiel.quantite_stock < diff:
+                    raise ValueError(f"Stock insuffisant pour ajuster la sortie de {materiel.nom_Materiel}. Disponible: {materiel.quantite_stock}")
+                
+                materiel.quantite_stock -= diff
+                materiel.save()
+                
         super().save(*args, **kwargs)
+
+        # Mettre à jour le montant_total de la Sortie parente (surtout pour les ventes)
+        sortie = self.id_sortie
+        total = sum(l.sous_total or 0 for l in sortie.lignes.all())
+        sortie.montant_total = total
+        sortie.save(update_fields=['montant_total'])

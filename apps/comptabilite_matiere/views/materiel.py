@@ -131,6 +131,39 @@ class MaterielMedicalViewSet(viewsets.ModelViewSet):
             'materiels': serializer.data
         })
 
+    @action(detail=False, methods=['get'])
+    def alertes_peremption(self, request):
+        """
+        Récupérer les matériels médicaux approchant de la date de péremption (< 30 jours).
+        Se base sur les lignes de livraison.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from apps.comptabilite_matiere.models import LigneLivraison
+        
+        limite = timezone.now().date() + timedelta(days=30)
+        lignes = LigneLivraison.objects.filter(
+            type_materiel='MEDICAL',
+            date_peremption__lte=limite,
+            date_peremption__gte=timezone.now().date()
+        ).select_related('materiel', 'id_livraison')
+        
+        data = [
+            {
+                'id_materiel': l.materiel.idMateriel,
+                'nom_materiel': l.nom_materiel or l.materiel.nom_Materiel,
+                'date_peremption': l.date_peremption,
+                'quantite_restante': l.materiel.quantite_stock,
+                'bon_livraison': l.id_livraison.bon_livraison_numero
+            }
+            for l in lignes
+        ]
+        
+        return Response({
+            'count': len(data),
+            'alertes': data
+        })
+
 
 class MaterielDurableViewSet(viewsets.ModelViewSet):
     """

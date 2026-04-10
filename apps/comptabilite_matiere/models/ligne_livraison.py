@@ -52,3 +52,28 @@ class LigneLivraison(models.Model):
 
     def __str__(self):
         return f"{self.materiel} - {self.quantite_conforme}+{self.quantite_non_conforme}"
+
+    def save(self, *args, **kwargs):
+        # Si c'est une nouvelle ligne, on incrémente le stock
+        if not self.pk:
+            materiel = self.materiel
+            materiel.quantite_stock += self.quantite_conforme
+            materiel.save()
+        else:
+            # Si c'est une modification, il faudrait idéalement gérer l'ajustement.
+            # Pour l'instant, on se base sur la spécification simple d'ajout.
+            # Optionnel: Gérer la différence si quantite_conforme change.
+            old_instance = LigneLivraison.objects.get(pk=self.pk)
+            diff = self.quantite_conforme - old_instance.quantite_conforme
+            if diff != 0:
+                materiel = self.materiel
+                materiel.quantite_stock += diff
+                materiel.save()
+                
+        super().save(*args, **kwargs)
+        
+        # Mettre à jour le montant_total de la Livraison parente
+        livraison = self.id_livraison
+        total = sum(l.prix_unitaire_achat * l.quantite_conforme for l in livraison.lignes.all())
+        livraison.montant_total = total
+        livraison.save(update_fields=['montant_total'])
